@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Styled Slider with Submit</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #dfe3e7;
+    }
+
+    .slider-container {
+      width: 100%;
+      position: absolute;
+      top: 65%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px;
+    }
+
+    .slider-wrapper {
+      position: relative;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    
+    .slider {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 5px;
+      border-radius: 5px;
+      outline: none;
+      cursor: pointer;
+      background: linear-gradient(to right, #118ee9 50%, #ffffff 50%);
+    }
+
+    .slider.not-active {
+        background: white;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #ffffff;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      border: 2.9px solid #118ee9;
+    }
+    
+    .tooltip {
+      position: absolute;
+      top: -50px;
+      background: #118ee9;
+      color: #fff;
+      font-size: 0.9rem;
+      padding: 5px 10px;
+      border-radius: 5px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tooltip::after {
+      content: "";
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid #118ee9;
+    }
+
+    .submit-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    .labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: -10px;
+    }
+
+    button {
+      background-color: #118ee9;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.9em;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    button:hover {
+      background-color: #269aed;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      background-color: #ccc;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="slider-container">
+    <div class="slider-wrapper">
+      <div class="tooltip" id="tooltip">Drag to Start</div>
+      <input type="range" id="rating-slider" class="slider not-active" min="0" max="10" step="1" value="7">
+    </div>
+    <div class="labels">
+      <span>Not Likely</span>
+      <span>Extremely Likely</span>
+    </div>
+    <div class="submit-container">
+      <button id="submit-button" disabled>SUBMIT</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    const slider = document.getElementById("rating-slider");
+    const tooltip = document.getElementById("tooltip");
+    const submitButton = document.getElementById("submit-button");
+    const result = document.getElementById("result");
+
+    // Update tooltip dynamically
+    function updateTooltip(initial = false) {
+      const sliderWidth = slider.offsetWidth;
+      const sliderMin = slider.min;
+      const sliderMax = slider.max;
+      const value = slider.value;
+
+      const percentage = ((value - sliderMin) / (sliderMax - sliderMin)) * 100;
+      tooltip.textContent = initial ? "Drag to Start" : value;
+
+      // Center the tooltip above the slider thumb
+      const thumbWidth = 18; // Width of the slider thumb
+      const tooltipWidth = tooltip.offsetWidth;
+      const offset = (sliderWidth - thumbWidth) * (percentage / 100) + (thumbWidth / 2) - (tooltipWidth / 2);
+      tooltip.style.left = `${offset}px`;
+      
+      if(!initial) {
+        slider.style.background = `linear-gradient(to right, #118ee9 ${percentage}%, #ffffff ${percentage}%)`;
+        submitButton.disabled = false;
+        slider.classList.remove("not-active");
+      }
+    }
+
+    slider.addEventListener("input", () => updateTooltip(false));
+
+    // Show selected value on submit and send event to parent window
+    function handleButtonClick() {
+      const ratingValue = slider.value;
+
+      // Disable the slider after submission
+      slider.disabled = true;
+      submitButton.disabled = true;
+
+      // Update result on the page
+      // result.textContent = `You selected: ${ratingValue}`;
+
+      // Post the message to the parent window
+      window.parent.postMessage({
+        event_code: 'ym-client-event',
+        data: JSON.stringify({
+          event: {
+            code: "nps",
+            data: {
+              rating: ratingValue
+            }
+          }
+        })
+      }, '*');
+    }
+
+    submitButton.addEventListener("click", handleButtonClick);
+
+    // Handle incoming messages from the parent window
+    window.addEventListener('message', (event) => {
+      console.log("Received message from parent window:", event.data);
+    });
+
+    // Initial tooltip position
+    updateTooltip(true);
+  </script>
+</body>
+</html>
